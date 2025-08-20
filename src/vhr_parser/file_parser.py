@@ -1,5 +1,4 @@
 import os
-import pyarrow
 from pathlib import Path
 import gzip
 import struct
