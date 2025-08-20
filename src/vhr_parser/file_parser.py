@@ -1,9 +1,11 @@
 import os
 from pathlib import Path
+
+from tqdm import tqdm
+import polars as pl
 import gzip
 import struct
 import mmap
-import pandas as pd
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 
@@ -153,10 +155,10 @@ class FileParser:
         # 输出为 parquet 格式
         out_file = out_file.with_suffix(".parquet")
 
-        df = pd.DataFrame(all_rows)
+        df = pl.DataFrame(all_rows)
 
         # 写入处理后的数据
-        df.to_parquet(out_file, engine="pyarrow", index=False)
+        df.write_parquet(out_file, compression="snappy")
 
         # 释放mmap memory视图
         mm_view.release()
@@ -169,18 +171,27 @@ class FileParser:
     # 多进程处理目录文件
     # ---------------------------
     def process_directory(self):
-        files = (f for f in self.input_dir.rglob("*.bin") if f.is_file())
+        files = [file for file in self.input_dir.rglob("*.bin") if file.is_file()]
+        if not files:
+            print("没有找到.bin文件")
 
+        pbar = tqdm(total=len(files), desc="任务进度: ")
         with ProcessPoolExecutor(max_workers=self.max_workers) as executor:
             future_to_file = {executor.submit(self.process_file, f): f for f in files}
 
-            for future in as_completed(future_to_file):
-                f = future_to_file[future]
-                try:
-                    out_file = future.result()
-                    print(f"{f} 解析完成，结果保存到 {out_file}")
-                except Exception as e:
-                    print(f"{f} 解析失败: {e}")
+            try:
+                for future in as_completed(future_to_file):
+                    f = future_to_file[future]
+
+                    try:
+                        out_file = future.result()
+                        # 更新tqdm 进度条
+                        pbar.update(1)
+                        print(f"{f} 解析完成，结果保存到 {out_file}")
+                    except Exception as e:
+                        print(f"{f} 解析失败: {e}")
+            finally:
+                pbar.close()
 
 
 # ---------------------------
