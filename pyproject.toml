@@ -19,11 +19,13 @@ packages = ["src/vhr_parser"]
 
 [tool.pixi.pypi-dependencies]
 vhr_parser = { path = ".", editable = true }
-cantools = { path = "/Users/bai.tn/DevOps/vhr_parser/wheels/cantools-40.5.0-py3-none-any.whl" }
+cantools = { path = "./wheels/cantools-40.5.0-py3-none-any.whl" }
+# /Users/bai.tn/DevOps/vhr_parser
 
 [tool.pixi.tasks]
-notebook = "jupyter lab"    # --no-browser --port=8888 --ip=127.0.0.1"
+notebook = "jupyter lab"        # --no-browser --port=8888 --ip=127.0.0.1"
 main = "python -m src.main"
+clean = "rm -rf ./data/output/"
 
 [tool.pixi.dependencies]
 pandas = ">=2.3.1,<3"
